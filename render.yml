@@ -2,7 +2,7 @@ services:
   - type: web
     name: queen-cynthia-bot
     runtime: node
-    plan: starter # "free" haitunzi disk ya session (angalia maelezo chini)
+    plan: starter
     region: oregon
     branch: main
     buildCommand: npm install
@@ -14,15 +14,17 @@ services:
         value: 20.11.0
       - key: PORT
         value: "3000"
-    disk:
-      name: queen-cynthia-session
-      mountPath: /opt/render/project/src/session
-      sizeGB: 1
+      - key: MONGODB_URI
+        sync: false # weka connection string yako ya MongoDB hapa kwenye Render dashboard
+      - key: ADMIN_PASSWORD
+        sync: false # weka password ya /admin hapa (usiiache kama default)
+      - key: ADMIN_SESSION_SECRET
+        sync: false # string ya siri ya random kwa ajili ya kusaini session cookie
 
 # MAELEZO:
-# - "disk" inahifadhi session za WhatsApp (folda session/) zisipotee bot
-#   inapoanza upya. Render inahitaji plan ya kulipia (Starter au zaidi)
-#   ili kutumia persistent disk - "free" plan haina disk ya kudumu, hivyo
-#   utalazimika ku-pair upya kila deploy/restart ukitumia free plan.
+# - Session (creds za WhatsApp) sasa zinahifadhiwa MongoDB (MONGODB_URI),
+#   hivyo hazipotei tena bot ikianzishwa upya / kudeploy - "disk" ya Render
+#   haihitajiki tena kwa ajili ya session (tofauti na toleo la awali
+#   lililotumia faili za lokali).
 # - PORT inasomwa kutoka kwa mazingira (config.js -> process.env.PORT),
 #   Render itaweka yake moja kwa moja pia.

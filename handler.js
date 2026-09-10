@@ -3,6 +3,7 @@ const general = require("./commands/general");
 const downloader = require("./commands/downloader");
 const group = require("./commands/group");
 const status = require("./commands/status");
+const misc = require("./commands/misc");
 
 const commands = {
   menu: general.menu,
@@ -15,6 +16,10 @@ const commands = {
   promote: group.promote,
   demote: group.demote,
   autostatus: status.autostatus,
+  owner: misc.owner,
+  runtime: misc.runtime,
+  jid: misc.jid,
+  listsession: misc.listsession,
 };
 
 async function handleMessage(sock, msg) {

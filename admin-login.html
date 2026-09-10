@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QUEEN CYNTHIA • Admin Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink: #ff6fb0;
+    --pink-deep: #d6398f;
+    --purple: #9b5de5;
+    --gold: #ffd6ec;
+    --bg-dark: #1b0f22;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Poppins', sans-serif;
+    background: radial-gradient(circle at 20% 20%, #3a1c4d 0%, var(--bg-dark) 55%),
+                linear-gradient(160deg, #2b0f3a, #120616);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+  }
+  .card{
+    width:100%;
+    max-width:380px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(18px);
+    border-radius: 28px;
+    padding: 36px 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    text-align:center;
+  }
+  .crown{ font-size:38px; margin-bottom:4px; }
+  h1{
+    font-family:'Great Vibes', cursive;
+    font-size:38px;
+    margin:0 0 2px;
+    background: linear-gradient(90deg, var(--pink), var(--gold), var(--purple));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .subtitle{
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:#e9c9f0;
+    margin-bottom:26px;
+  }
+  label{ display:block; text-align:left; font-size:13px; color:#f3d9ff; margin-bottom:8px; }
+  input[type="password"]{
+    width:100%;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.25);
+    color:#fff;
+    font-size:15px;
+    outline:none;
+  }
+  input[type="password"]:focus{
+    border-color: var(--pink);
+    box-shadow: 0 0 0 3px rgba(255,111,176,0.25);
+  }
+  button{
+    width:100%;
+    margin-top:18px;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    font-size:15px;
+    font-weight:600;
+    color:#2b0f3a;
+    background: linear-gradient(90deg, var(--pink), var(--gold));
+    cursor:pointer;
+  }
+  button:disabled{ opacity:.6; cursor:not-allowed; }
+  .error{
+    margin-top:16px;
+    font-size:13px;
+    color:#ffb4c6;
+    background: rgba(255,80,120,0.12);
+    border:1px solid rgba(255,80,120,0.3);
+    padding:10px 14px;
+    border-radius:12px;
+    display:none;
+  }
+  .error.show{ display:block; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="crown">🔐</div>
+    <h1>Admin</h1>
+    <div class="subtitle">Queen Cynthia · Admin Panel</div>
+
+    <form id="loginForm">
+      <label for="password">Weka Admin Password</label>
+      <input type="password" id="password" placeholder="••••••••" required autofocus />
+      <button type="submit" id="submitBtn">Ingia</button>
+    </form>
+
+    <div class="error" id="errorBox"></div>
+  </div>
+
+<script>
+  const form = document.getElementById("loginForm");
+  const errorBox = document.getElementById("errorBox");
+  const submitBtn = document.getElementById("submitBtn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove("show");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Inaangalia...";
+
+    try {
+      const res = await fetch("/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: document.getElementById("password").value }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        window.location.href = "/admin";
+      } else {
+        errorBox.textContent = data.error || "Password si sahihi.";
+        errorBox.classList.add("show");
+      }
+    } catch (err) {
+      errorBox.textContent = "Hitilafu ya mtandao. Jaribu tena.";
+      errorBox.classList.add("show");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Ingia";
+    }
+  });
+</script>
+</body>
+</html>

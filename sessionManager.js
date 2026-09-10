@@ -1,8 +1,5 @@
-const path = require("path");
-const fs = require("fs");
 const {
   default: makeWASocket,
-  useMultiFileAuthState,
   fetchLatestBaileysVersion,
   DisconnectReason,
   Browsers,
@@ -14,9 +11,9 @@ const pino = require("pino");
 
 const config = require("./config");
 const { handleMessage } = require("./handler");
-
-const SESSIONS_DIR = path.join(__dirname, "session");
-if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+// Session (creds/keys) sasa zinahifadhiwa MongoDB badala ya faili za lokali -
+// hii inaruhusu bot kutokupoteza session bot ikianzishwa upya / ku-redeploy.
+const { useMongoAuthState, listRegisteredSessionIds } = require("./mongoAuthState");
 
 // sessionId -> { sock, status, number, qr, pairingCode }
 const sessions = new Map();
@@ -51,6 +48,7 @@ function getSessionsSummary() {
     id,
     number: s.number,
     status: s.status,
+    startedAt: s.startedAt,
   }));
 }
 
@@ -82,26 +80,15 @@ async function startSession(number, { onPairingCode } = {}) {
     sessions.delete(sessionId);
   }
 
-  const sessionDir = path.join(SESSIONS_DIR, sessionId);
+  let { state, saveCreds, clearSession } = await useMongoAuthState(sessionId);
 
-  // Kama hakuna creds zilizosajiliwa kikamilifu bado, futa folda ya session
-  // kuanza mpya kabisa (creds "chakavu" kutoka jaribio lililoshindwa zinaweza
-  // kusababisha WhatsApp kukataa code mpya).
-  const credsPath = path.join(sessionDir, "creds.json");
-  if (fs.existsSync(sessionDir) && !fs.existsSync(credsPath)) {
-    fs.rmSync(sessionDir, { recursive: true, force: true });
-  } else if (fs.existsSync(credsPath)) {
-    try {
-      const creds = JSON.parse(fs.readFileSync(credsPath, "utf8"));
-      if (!creds.registered) {
-        fs.rmSync(sessionDir, { recursive: true, force: true });
-      }
-    } catch (_) {
-      fs.rmSync(sessionDir, { recursive: true, force: true });
-    }
+  // Kama session ilikuwa na creds "chakavu" kutoka jaribio lililoshindwa
+  // (haijasajiliwa kikamilifu), ifute MongoDB na uanze mpya kabisa - creds
+  // za zamani zinaweza kusababisha WhatsApp kukataa pairing code mpya.
+  if (!state.creds.registered) {
+    await clearSession();
+    ({ state, saveCreds, clearSession } = await useMongoAuthState(sessionId));
   }
-
-  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`🧩 Baileys version: ${version.join(".")} (latest: ${isLatest})`);
 
@@ -149,7 +136,14 @@ async function startSession(number, { onPairingCode } = {}) {
     maxMsgRetryCount: 5,
   });
 
-  const record = { sock, status: "connecting", number: sessionId, pairingCode: null };
+  const record = {
+    sock,
+    status: "connecting",
+    number: sessionId,
+    pairingCode: null,
+    startedAt: Date.now(),
+    clearSession,
+  };
   sessions.set(sessionId, record);
 
   // Omba pairing code endapo bado hatujasajiliwa (hatuhitaji QR)
@@ -194,7 +188,9 @@ async function startSession(number, { onPairingCode } = {}) {
       if (loggedOut) {
         record.status = "logged_out";
         sessions.delete(sessionId);
-        fs.rmSync(sessionDir, { recursive: true, force: true });
+        clearSession().catch((err) =>
+          console.error(`Imeshindwa kufuta session ${sessionId} kwenye MongoDB:`, err.message)
+        );
         console.log(`⚠️ Session ${sessionId} imetoka (logged out) na imefutwa.`);
         if (ioRef) ioRef.emit("disconnected", { number: sessionId, willReconnect: false });
       } else {
@@ -271,12 +267,17 @@ function getSession(sessionId) {
 }
 
 // Restart session zilizokuwepo kabla ya bot kuzimwa (zenye creds tayari)
+// - sasa zinasomwa kutoka MongoDB badala ya folda ya lokali "session/".
 async function resumeExistingSessions() {
-  if (!fs.existsSync(SESSIONS_DIR)) return;
-  const dirs = fs.readdirSync(SESSIONS_DIR).filter((d) =>
-    fs.existsSync(path.join(SESSIONS_DIR, d, "creds.json"))
-  );
-  for (const sessionId of dirs.slice(0, config.MAX_SESSIONS)) {
+  let sessionIds = [];
+  try {
+    sessionIds = await listRegisteredSessionIds();
+  } catch (err) {
+    console.error("Imeshindwa kusoma session kutoka MongoDB:", err.message);
+    return;
+  }
+
+  for (const sessionId of sessionIds.slice(0, config.MAX_SESSIONS)) {
     try {
       await startSession(sessionId);
     } catch (err) {
@@ -285,11 +286,39 @@ async function resumeExistingSessions() {
   }
 }
 
+// Inatumika na /admin panel kulazimisha session itoke (logout) na kufutwa
+// kabisa kwenye MongoDB.
+async function forceLogoutSession(sessionId) {
+  const id = cleanNumber(sessionId);
+  const record = sessions.get(id);
+
+  if (record) {
+    try {
+      record.sock?.logout?.();
+    } catch (_) {}
+    try {
+      record.sock?.end?.(undefined);
+    } catch (_) {}
+    sessions.delete(id);
+    if (record.clearSession) {
+      await record.clearSession();
+      return true;
+    }
+  }
+
+  // Session haipo "live" kwenye kumbukumbu (mfano bot imeanzishwa upya),
+  // lakini bado inaweza kuwa na creds MongoDB - ifute moja kwa moja.
+  const { clearSession } = await useMongoAuthState(id);
+  await clearSession();
+  return true;
+}
+
 module.exports = {
   startSession,
   getSession,
   getSessionsSummary,
   resumeExistingSessions,
+  forceLogoutSession,
   activeCount,
   setIO,
 };

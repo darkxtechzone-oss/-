@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QUEEN CYNTHIA • Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink: #ff6fb0;
+    --purple: #9b5de5;
+    --gold: #ffd6ec;
+    --bg-dark: #1b0f22;
+    --green: #6be9a3;
+    --red: #ff8a8a;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Poppins', sans-serif;
+    background: radial-gradient(circle at 20% 20%, #3a1c4d 0%, var(--bg-dark) 55%),
+                linear-gradient(160deg, #2b0f3a, #120616);
+    color:#fff;
+    padding: 32px 20px 60px;
+  }
+  .wrap{ max-width: 720px; margin: 0 auto; }
+  .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 26px; flex-wrap: wrap; gap: 12px; }
+  h1{
+    font-family:'Great Vibes', cursive;
+    font-size:42px;
+    margin:0;
+    background: linear-gradient(90deg, var(--pink), var(--gold), var(--purple));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:#e9c9f0; }
+  #logoutBtn{
+    background: rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.2);
+    color:#fff; padding:10px 18px; border-radius:12px; cursor:pointer; font-size:13px;
+  }
+  #logoutBtn:hover{ background: rgba(255,255,255,0.16); }
+
+  .stats{ display:flex; gap:14px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat{
+    flex:1; min-width:140px;
+    background: rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:18px; padding:16px 18px;
+  }
+  .stat .num{ font-size:26px; font-weight:700; }
+  .stat .label{ font-size:11.5px; color:#d9b8e8; text-transform:uppercase; letter-spacing:1px; }
+
+  table{ width:100%; border-collapse: collapse; background: rgba(255,255,255,0.05); border-radius:18px; overflow:hidden; }
+  th, td{ text-align:left; padding:14px 16px; font-size:13.5px; }
+  th{ background: rgba(255,255,255,0.08); font-weight:600; color:#f3d9ff; text-transform:uppercase; font-size:11px; letter-spacing:1px; }
+  tr:not(:last-child) td{ border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .badge{ padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:600; }
+  .badge.connected{ background: rgba(107,233,163,0.18); color: var(--green); }
+  .badge.connecting, .badge.reconnecting{ background: rgba(255,214,110,0.18); color: #ffd66e; }
+  .badge.error, .badge.logged_out{ background: rgba(255,138,138,0.18); color: var(--red); }
+
+  .kick{
+    background: rgba(255,138,138,0.15);
+    border:1px solid rgba(255,138,138,0.4);
+    color:#ffb4c6; padding:7px 14px; border-radius:10px; cursor:pointer; font-size:12.5px;
+  }
+  .kick:hover{ background: rgba(255,138,138,0.3); }
+  .empty{ text-align:center; padding: 30px; color:#c8a9d6; font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Admin Panel</h1>
+      <div class="sub" id="botNameLabel">Queen Cynthia</div>
+    </div>
+    <button id="logoutBtn">Toka (Logout)</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num" id="activeNum">-</div><div class="label">Session Active</div></div>
+    <div class="stat"><div class="num" id="maxNum">-</div><div class="label">Max Session</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Namba</th><th>Status</th><th>Tangu</th><th></th></tr>
+    </thead>
+    <tbody id="sessionsBody"></tbody>
+  </table>
+  <div class="empty" id="emptyState" style="display:none;">Hakuna session inayoendesha kwa sasa.</div>
+</div>
+
+<script>
+  const sessionsBody = document.getElementById("sessionsBody");
+  const emptyState = document.getElementById("emptyState");
+
+  function timeAgo(ts) {
+    if (!ts) return "-";
+    const secs = Math.floor((Date.now() - ts) / 1000);
+    if (secs < 60) return `${secs}s`;
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    return `${hrs}h`;
+  }
+
+  async function loadSessions() {
+    const res = await fetch("/admin/api/sessions");
+    if (res.status === 401) {
+      window.location.href = "/admin";
+      return;
+    }
+    const data = await res.json();
+    document.getElementById("botNameLabel").textContent = data.botName;
+    document.getElementById("activeNum").textContent = data.active;
+    document.getElementById("maxNum").textContent = data.max;
+
+    sessionsBody.innerHTML = "";
+    if (!data.sessions.length) {
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    for (const s of data.sessions) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${s.number}</td>
+        <td><span class="badge ${s.status}">${s.status}</span></td>
+        <td>${timeAgo(s.startedAt)}</td>
+        <td><button class="kick" data-id="${s.id}">Toa (logout)</button></td>
+      `;
+      sessionsBody.appendChild(tr);
+    }
+
+    document.querySelectorAll(".kick").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm(`Una uhakika unataka ku-logout session ${btn.dataset.id}?`)) return;
+        btn.disabled = true;
+        btn.textContent = "...";
+        await fetch(`/admin/api/sessions/${btn.dataset.id}/logout`, { method: "POST" });
+        loadSessions();
+      });
+    });
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await fetch("/admin/logout", { method: "POST" });
+    window.location.href = "/admin";
+  });
+
+  loadSessions();
+  setInterval(loadSessions, 5000);
+</script>
+</body>
+</html>

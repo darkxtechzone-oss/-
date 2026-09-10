@@ -42,7 +42,7 @@ Kisha fungua kivinjari: `http://localhost:3000`
 2. Bonyeza **"✨ Pata Pairing Code"**
 3. Kwenye simu: WhatsApp → Mipangilio → Vifaa Vilivyounganishwa → Unganisha kifaa → *"Unganisha kwa namba badala yake"* → weka code uliyopewa
 
-Session zinahifadhiwa kwenye folda `session/<namba>/` ili usilazimike ku-pair kila unapowasha bot tena.
+Session zinahifadhiwa kwenye **MongoDB** (siyo tena kwenye faili za lokali) ili usilazimike ku-pair kila unapowasha bot tena, hata ukiwa unaendesha kwenye server isiyo na disk ya kudumu (mfano Render "free" plan).
 
 ## Mipangilio Muhimu (`config.js`)
 
@@ -54,6 +54,8 @@ Session zinahifadhiwa kwenye folda `session/<namba>/` ili usilazimike ku-pair ki
 | `MAX_SESSIONS` | Idadi ya watumiaji wanaoruhusiwa kuunganisha kwa wakati mmoja (3) |
 | `AUTO_VIEW_STATUS` / `AUTO_LIKE_STATUS` | Kuwasha/kuzima kuona na kupenda status |
 | `MENU_IMAGE` | Njia ya picha inayotumika kwenye `.menu` |
+| `MONGODB_URI` | Connection string ya MongoDB inayotunza session (bora kupitia env var) |
+| `ADMIN_PASSWORD` | Password ya kuingia kwenye `/admin` (bora kupitia env var) |
 
 ## Amri za Bot
 
@@ -65,6 +67,14 @@ Session zinahifadhiwa kwenye folda `session/<namba>/` ili usilazimike ku-pair ki
 - `.ig <link>` — pakua kutoka Instagram
 - `.kick / .promote / .demote @tag` — usimamizi wa group (admin)
 - `.autostatus on/off` — washa/zima kuona na kupenda status (owner)
+- `.owner` — mawasiliano ya owner wa bot
+- `.runtime` — muda ambao bot imekuwa ikiendesha
+- `.jid` — onyesha JID ya chat husika
+- `.listsession` — orodha ya session zinazoendesha kwa sasa (owner)
+
+## Admin Panel
+
+Nenda `/admin` kwenye kivinjari, weka password iliyowekwa kwenye `ADMIN_PASSWORD` (default: `admin123` — **badilisha hii kwenye production**). Kwenye dashboard unaweza kuona session zote zinazoendesha na kuzi-logout (kufuta) moja kwa moja.
 
 ## Leseni
 
