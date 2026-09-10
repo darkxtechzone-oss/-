@@ -205,8 +205,8 @@
     <div class="session-pill" id="sessionPill">Inapakia session...</div>
 
     <form id="pairForm">
-      <label for="number">Namba ya WhatsApp (pamoja na country code)</label>
-      <input type="text" id="number" placeholder="mfano: 255712345678" inputmode="numeric" required />
+      <label for="number">Namba ya WhatsApp (pamoja na country code, BILA + wala 0 mwanzoni)</label>
+      <input type="text" id="number" placeholder="mfano: 255712345678 (siyo 0712345678)" inputmode="numeric" required />
       <button type="submit" id="submitBtn">✨ Pata Pairing Code</button>
     </form>
 
@@ -214,8 +214,12 @@
 
     <div class="result" id="resultBox">
       <div class="code-box" id="codeText">— — — — — —</div>
+      <div class="hint" id="countdownHint">
+        ⏱️ Ingiza code hii HARAKA kwenye WhatsApp (dakika 1) kabla haijaisha muda: <strong id="countdown">60s</strong>
+      </div>
       <div class="hint">
         Fungua WhatsApp → Mipangilio → Vifaa Vilivyounganishwa → Unganisha kifaa → "Unganisha kwa namba badala yake" → weka code hii.
+        <br/>Hakikisha namba uliyoandika hapo juu ndiyo EXACTLY namba ya simu unayotaka kuunganisha.
       </div>
     </div>
 
@@ -253,6 +257,24 @@
   refreshSessions();
   setInterval(refreshSessions, 5000);
 
+  let countdownTimer = null;
+  function startCountdown(seconds){
+    const el = document.getElementById('countdown');
+    clearInterval(countdownTimer);
+    let remaining = seconds;
+    el.textContent = remaining + 's';
+    countdownTimer = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(countdownTimer);
+        el.textContent = 'Imeisha - bofya "Pata Pairing Code" upya';
+        el.style.color = '#ffb4c6';
+        return;
+      }
+      el.textContent = remaining + 's';
+    }, 1000);
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorBox.classList.remove('show');
@@ -274,6 +296,7 @@
       } else {
         codeText.textContent = data.code;
         resultBox.classList.add('show');
+        startCountdown(60);
       }
     }catch(err){
       errorBox.textContent = 'Imeshindwa kuwasiliana na server.';
