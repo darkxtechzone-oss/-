@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# WhatsApp session data (siri - usisukume kwenye git)
+session/
+
+# Env files
+.env
+.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Build / misc
+dist/
+build/
+*.zip
