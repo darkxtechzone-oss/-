@@ -5,6 +5,7 @@ const {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   DisconnectReason,
+  Browsers,
   delay,
 } = require("@whiskeysockets/baileys");
 const { Boom } = require("@hapi/boom");
@@ -62,7 +63,35 @@ async function startSession(number, { onPairingCode } = {}) {
     return existing;
   }
 
+  // Kama kuna socket ya zamani ambayo bado haijaunganishwa (jaribio lililopita
+  // halikukamilika), ifunge kabisa kabla ya kuanza upya - kuacha socket ya zamani
+  // ikiwa wazi wakati mmoja na mpya ndiyo chanzo kikuu cha "Couldn't link device".
+  if (existing) {
+    try {
+      existing.sock?.end?.(undefined);
+    } catch (_) {}
+    sessions.delete(sessionId);
+  }
+
   const sessionDir = path.join(SESSIONS_DIR, sessionId);
+
+  // Kama hakuna creds zilizosajiliwa kikamilifu bado, futa folda ya session
+  // kuanza mpya kabisa (creds "chakavu" kutoka jaribio lililoshindwa zinaweza
+  // kusababisha WhatsApp kukataa code mpya).
+  const credsPath = path.join(sessionDir, "creds.json");
+  if (fs.existsSync(sessionDir) && !fs.existsSync(credsPath)) {
+    fs.rmSync(sessionDir, { recursive: true, force: true });
+  } else if (fs.existsSync(credsPath)) {
+    try {
+      const creds = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+      if (!creds.registered) {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+      }
+    } catch (_) {
+      fs.rmSync(sessionDir, { recursive: true, force: true });
+    }
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
   const { version } = await fetchLatestBaileysVersion();
 
@@ -71,7 +100,10 @@ async function startSession(number, { onPairingCode } = {}) {
     auth: state,
     logger: pino({ level: "silent" }),
     printQRInTerminal: false,
-    browser: [config.BOT_NAME.replace(/[^\x00-\x7F]/g, "").trim() || "QueenCynthia", "Chrome", "1.0.0"],
+    // MUHIMU: pairing code (kuunganisha kwa namba) inahitaji fingerprint ya
+    // browser inayotambulika na WhatsApp. Jina la kawaida (hata lenye emoji
+    // au herufi maalum) linaweza kusababisha "Couldn't link device".
+    browser: Browsers.ubuntu("Chrome"),
   });
 
   const record = { sock, status: "connecting", number: sessionId, pairingCode: null };
@@ -83,6 +115,7 @@ async function startSession(number, { onPairingCode } = {}) {
       await delay(1500);
       const code = await sock.requestPairingCode(sessionId);
       record.pairingCode = code;
+      record.pairingCodeIssuedAt = Date.now();
       if (onPairingCode) onPairingCode(code);
     } catch (err) {
       console.error("Imeshindwa kutengeneza pairing code:", err);
