@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QUEEN CYNTHIA • Pairing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink: #ff6fb0;
+    --pink-deep: #d6398f;
+    --purple: #9b5de5;
+    --gold: #ffd6ec;
+    --bg-dark: #1b0f22;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Poppins', sans-serif;
+    background: radial-gradient(circle at 20% 20%, #3a1c4d 0%, var(--bg-dark) 55%),
+                linear-gradient(160deg, #2b0f3a, #120616);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+    overflow-x:hidden;
+  }
+  body::before, body::after{
+    content:"";
+    position:fixed;
+    width:340px;height:340px;
+    border-radius:50%;
+    filter: blur(90px);
+    opacity:.35;
+    z-index:0;
+  }
+  body::before{ background: var(--pink); top:-80px; left:-80px; }
+  body::after{ background: var(--purple); bottom:-100px; right:-80px; }
+
+  .card{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:420px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(18px);
+    border-radius: 28px;
+    padding: 36px 30px 26px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    text-align:center;
+  }
+  .crown{ font-size:42px; margin-bottom:4px; }
+  h1{
+    font-family:'Great Vibes', cursive;
+    font-size:48px;
+    margin:0 0 2px;
+    background: linear-gradient(90deg, var(--pink), var(--gold), var(--purple));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .subtitle{
+    font-size:12.5px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:#e9c9f0;
+    margin-bottom:22px;
+  }
+  .session-pill{
+    display:inline-block;
+    font-size:12px;
+    padding:6px 14px;
+    border-radius:999px;
+    background: rgba(255,111,176,0.15);
+    border:1px solid rgba(255,111,176,0.4);
+    color:#ffd6ec;
+    margin-bottom:22px;
+  }
+  label{
+    display:block;
+    text-align:left;
+    font-size:13px;
+    color:#f3d9ff;
+    margin-bottom:8px;
+  }
+  input[type="text"]{
+    width:100%;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.25);
+    color:#fff;
+    font-size:15px;
+    outline:none;
+    transition: border .2s, box-shadow .2s;
+  }
+  input[type="text"]:focus{
+    border-color: var(--pink);
+    box-shadow: 0 0 0 3px rgba(255,111,176,0.25);
+  }
+  button{
+    width:100%;
+    margin-top:18px;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:.5px;
+    color:#2b0f3a;
+    background: linear-gradient(90deg, var(--pink), var(--gold));
+    cursor:pointer;
+    transition: transform .15s, box-shadow .15s;
+  }
+  button:hover{ transform: translateY(-2px); box-shadow: 0 10px 24px rgba(255,111,176,0.35); }
+  button:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+
+  .result{
+    margin-top:22px;
+    display:none;
+  }
+  .result.show{ display:block; }
+  .code-box{
+    font-family: 'Poppins', monospace;
+    font-size:30px;
+    font-weight:700;
+    letter-spacing:6px;
+    padding:16px;
+    border-radius:16px;
+    background: rgba(255,255,255,0.08);
+    border:1px dashed rgba(255,214,236,0.6);
+    color:#ffe3f4;
+  }
+  .hint{ font-size:12.5px; color:#d9b8e8; margin-top:10px; line-height:1.5; }
+  .error{
+    margin-top:16px;
+    font-size:13px;
+    color:#ffb4c6;
+    background: rgba(255,80,120,0.12);
+    border:1px solid rgba(255,80,120,0.3);
+    padding:10px 14px;
+    border-radius:12px;
+    display:none;
+  }
+  .error.show{ display:block; }
+
+  footer{
+    margin-top:26px;
+    font-size:11px;
+    color: rgba(255,255,255,0.45);
+    cursor:pointer;
+    user-select:none;
+  }
+  footer:hover{ color: rgba(255,255,255,0.75); }
+
+  .modal-overlay{
+    position:fixed; inset:0;
+    background: rgba(10,4,14,0.7);
+    backdrop-filter: blur(4px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding: 20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal{
+    max-width: 420px;
+    width:100%;
+    background: linear-gradient(160deg, #2b0f3a, #1b0f22);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:20px;
+    padding: 26px 24px;
+    text-align:left;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal h2{
+    margin:0 0 12px;
+    font-size:18px;
+    color:#ffd6ec;
+  }
+  .modal p{
+    font-size:13px;
+    line-height:1.7;
+    color:#e6d4ef;
+    margin: 0 0 10px;
+  }
+  .modal button{
+    margin-top:14px;
+    background: linear-gradient(90deg, var(--purple), var(--pink));
+    color:#fff;
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="crown">👑</div>
+    <h1>Queen Cynthia</h1>
+    <div class="subtitle">WhatsApp Bot · Web Pairing</div>
+    <div class="session-pill" id="sessionPill">Inapakia session...</div>
+
+    <form id="pairForm">
+      <label for="number">Namba ya WhatsApp (pamoja na country code)</label>
+      <input type="text" id="number" placeholder="mfano: 255712345678" inputmode="numeric" required />
+      <button type="submit" id="submitBtn">✨ Pata Pairing Code</button>
+    </form>
+
+    <div class="error" id="errorBox"></div>
+
+    <div class="result" id="resultBox">
+      <div class="code-box" id="codeText">— — — — — —</div>
+      <div class="hint">
+        Fungua WhatsApp → Mipangilio → Vifaa Vilivyounganishwa → Unganisha kifaa → "Unganisha kwa namba badala yake" → weka code hii.
+      </div>
+    </div>
+
+    <footer id="darkxCredit">this software provided by DarkX</footer>
+  </div>
+
+  <div class="modal-overlay" id="licenseModal">
+    <div class="modal">
+      <h2>📜 Leseni ya Matumizi</h2>
+      <p>Software hii imetengenezwa na kumilikiwa na <strong>DarkX</strong>.</p>
+      <p>Ni marufuku kunakili (copy), kusambaza, kuuza au kuigawa upya software hii — kwa sehemu au yote — bila ruhusa rasmi iliyoandikwa kutoka kwa mmiliki.</p>
+      <p>Matumizi yasiyoruhusiwa yanaweza kupelekea hatua za kisheria.</p>
+      <button id="closeModal">Nimeelewa</button>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('pairForm');
+  const numberInput = document.getElementById('number');
+  const submitBtn = document.getElementById('submitBtn');
+  const resultBox = document.getElementById('resultBox');
+  const codeText = document.getElementById('codeText');
+  const errorBox = document.getElementById('errorBox');
+  const sessionPill = document.getElementById('sessionPill');
+
+  async function refreshSessions(){
+    try{
+      const res = await fetch('/api/sessions');
+      const data = await res.json();
+      sessionPill.textContent = `Session zinazotumika: ${data.active} / ${data.max}`;
+    }catch(e){
+      sessionPill.textContent = 'Session: haipatikani';
+    }
+  }
+  refreshSessions();
+  setInterval(refreshSessions, 5000);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove('show');
+    resultBox.classList.remove('show');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Inatengeneza code...';
+
+    try{
+      const res = await fetch('/api/pair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: numberInput.value.trim() })
+      });
+      const data = await res.json();
+
+      if(!res.ok){
+        errorBox.textContent = data.error || 'Hitilafu imetokea.';
+        errorBox.classList.add('show');
+      } else {
+        codeText.textContent = data.code;
+        resultBox.classList.add('show');
+      }
+    }catch(err){
+      errorBox.textContent = 'Imeshindwa kuwasiliana na server.';
+      errorBox.classList.add('show');
+    }finally{
+      submitBtn.disabled = false;
+      submitBtn.textContent = '✨ Pata Pairing Code';
+      refreshSessions();
+    }
+  });
+
+  // ---- License popup ----
+  const darkxCredit = document.getElementById('darkxCredit');
+  const licenseModal = document.getElementById('licenseModal');
+  const closeModal = document.getElementById('closeModal');
+
+  darkxCredit.addEventListener('click', () => licenseModal.classList.add('show'));
+  closeModal.addEventListener('click', () => licenseModal.classList.remove('show'));
+  licenseModal.addEventListener('click', (e) => {
+    if(e.target === licenseModal) licenseModal.classList.remove('show');
+  });
+</script>
+</body>
+</html>
