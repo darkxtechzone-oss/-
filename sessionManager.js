@@ -6,6 +6,7 @@ const {
   fetchLatestBaileysVersion,
   DisconnectReason,
   Browsers,
+  makeCacheableSignalKeyStore,
   delay,
 } = require("@whiskeysockets/baileys");
 const { Boom } = require("@hapi/boom");
@@ -19,6 +20,14 @@ if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true }
 
 // sessionId -> { sock, status, number, qr, pairingCode }
 const sessions = new Map();
+
+// socket.io server instance, injected by webserver.js so we can push
+// real-time pairing codes / connection events straight to the browser
+// instead of making the page poll and wait.
+let ioRef = null;
+function setIO(io) {
+  ioRef = io;
+}
 
 function cleanNumber(number) {
   return String(number).replace(/[^0-9]/g, "");
@@ -97,13 +106,31 @@ async function startSession(number, { onPairingCode } = {}) {
 
   const sock = makeWASocket({
     version,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      // Cacheable signal key store: Baileys' recommended pattern for the
+      // auth keys - improves reliability of the encryption/registration
+      // handshake and was the key difference vs. the reference project
+      // that pairs successfully 100% of the time.
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
+    },
     logger: pino({ level: "silent" }),
     printQRInTerminal: false,
     // MUHIMU: pairing code (kuunganisha kwa namba) inahitaji fingerprint ya
     // browser inayotambulika na WhatsApp. Jina la kawaida (hata lenye emoji
     // au herufi maalum) linaweza kusababisha "Couldn't link device".
     browser: Browsers.ubuntu("Chrome"),
+    markOnlineOnConnect: true,
+    generateHighQualityLinkPreview: true,
+    getMessage: async () => undefined,
+    // --- Uthabiti wa muunganiko (huzuia socket kufa kabla code kutumika) ---
+    keepAliveIntervalMs: 20_000,
+    connectTimeoutMs: 60_000,
+    defaultQueryTimeoutMs: 60_000,
+    qrTimeout: 60_000,
+    emitOwnEvents: true,
+    retryRequestDelayMs: 2_000,
+    maxMsgRetryCount: 5,
   });
 
   const record = { sock, status: "connecting", number: sessionId, pairingCode: null };
@@ -130,6 +157,7 @@ async function startSession(number, { onPairingCode } = {}) {
     if (connection === "open") {
       record.status = "connected";
       console.log(`✅ ${config.BOT_NAME} (${sessionId}) imeunganishwa kikamilifu!`);
+      if (ioRef) ioRef.emit("connected", { number: sessionId });
     } else if (connection === "close") {
       const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
@@ -139,9 +167,11 @@ async function startSession(number, { onPairingCode } = {}) {
         sessions.delete(sessionId);
         fs.rmSync(sessionDir, { recursive: true, force: true });
         console.log(`⚠️ Session ${sessionId} imetoka (logged out) na imefutwa.`);
+        if (ioRef) ioRef.emit("disconnected", { number: sessionId, willReconnect: false });
       } else {
         record.status = "reconnecting";
         console.log(`⚠️ Session ${sessionId} imekatika, inaunganishwa upya...`);
+        if (ioRef) ioRef.emit("disconnected", { number: sessionId, willReconnect: true });
         startSession(sessionId).catch((e) => console.error(e));
       }
     }
@@ -232,4 +262,5 @@ module.exports = {
   getSessionsSummary,
   resumeExistingSessions,
   activeCount,
+  setIO,
 };

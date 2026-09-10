@@ -6,6 +6,7 @@
 <title>QUEEN CYNTHIA • Pairing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
 <style>
   :root{
     --pink: #ff6fb0;
@@ -237,6 +238,8 @@
   </div>
 
 <script>
+  const socket = io();
+
   const form = document.getElementById('pairForm');
   const numberInput = document.getElementById('number');
   const submitBtn = document.getElementById('submitBtn');
@@ -263,6 +266,7 @@
     clearInterval(countdownTimer);
     let remaining = seconds;
     el.textContent = remaining + 's';
+    el.style.color = '';
     countdownTimer = setInterval(() => {
       remaining--;
       if (remaining <= 0) {
@@ -275,37 +279,55 @@
     }, 1000);
   }
 
-  form.addEventListener('submit', async (e) => {
+  function resetUI(){
+    submitBtn.disabled = false;
+    submitBtn.textContent = '✨ Pata Pairing Code';
+  }
+
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     errorBox.classList.remove('show');
     resultBox.classList.remove('show');
+    clearInterval(countdownTimer);
     submitBtn.disabled = true;
     submitBtn.textContent = 'Inatengeneza code...';
 
-    try{
-      const res = await fetch('/api/pair', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: numberInput.value.trim() })
-      });
-      const data = await res.json();
+    // Socket.IO hupeleka code papo hapo inavyotengenezwa upande wa server -
+    // hakuna kusubiri (polling) kama awali, hivyo code haipotezi muda kabla
+    // haijafika kwenye simu yako.
+    socket.emit('pair-request', numberInput.value.trim());
+  });
 
-      if(!res.ok){
-        errorBox.textContent = data.error || 'Hitilafu imetokea.';
-        errorBox.classList.add('show');
-      } else {
-        codeText.textContent = data.code;
-        resultBox.classList.add('show');
-        startCountdown(60);
-      }
-    }catch(err){
-      errorBox.textContent = 'Imeshindwa kuwasiliana na server.';
-      errorBox.classList.add('show');
-    }finally{
-      submitBtn.disabled = false;
-      submitBtn.textContent = '✨ Pata Pairing Code';
-      refreshSessions();
-    }
+  socket.on('status', (data) => {
+    submitBtn.textContent = data.message || 'Inasubiri...';
+  });
+
+  socket.on('pairing-code', (data) => {
+    codeText.textContent = data.code;
+    resultBox.classList.add('show');
+    startCountdown(60);
+    resetUI();
+    refreshSessions();
+  });
+
+  socket.on('pairing-error', (data) => {
+    errorBox.textContent = data.error || 'Hitilafu imetokea.';
+    errorBox.classList.add('show');
+    resetUI();
+    refreshSessions();
+  });
+
+  socket.on('connected', (data) => {
+    resultBox.classList.remove('show');
+    errorBox.classList.remove('show');
+    errorBox.textContent = '';
+    submitBtn.textContent = `✅ ${data.number} imeunganishwa!`;
+    setTimeout(resetUI, 3000);
+    refreshSessions();
+  });
+
+  socket.on('disconnected', (data) => {
+    refreshSessions();
   });
 
   // ---- License popup ----

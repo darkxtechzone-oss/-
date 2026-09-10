@@ -1,8 +1,10 @@
+const http = require("http");
 const path = require("path");
 const express = require("express");
+const { Server } = require("socket.io");
 
 const config = require("./config");
-const { startSession, getSessionsSummary, activeCount } = require("./sessionManager");
+const { startSession, getSessionsSummary, activeCount, setIO } = require("./sessionManager");
 
 function startWebServer() {
   const app = express();
@@ -17,38 +19,43 @@ function startWebServer() {
     res.json({ active: activeCount(), max: config.MAX_SESSIONS, botName: config.BOT_NAME });
   });
 
-  app.post("/api/pair", async (req, res) => {
-    const { number } = req.body || {};
-    if (!number || !/^\d{9,15}$/.test(String(number).replace(/[^0-9]/g, ""))) {
-      return res.status(400).json({ error: "Weka namba sahihi ya WhatsApp (mfano: 255712345678)." });
-    }
+  const server = http.createServer(app);
+  const io = new Server(server);
+  setIO(io);
 
-    try {
-      let code = null;
-      const record = await startSession(number, {
-        onPairingCode: (c) => {
-          code = c;
-        },
-      });
+  io.on("connection", (socket) => {
+    socket.on("pair-request", async (rawNumber) => {
+      const number = String(rawNumber || "").replace(/[^0-9]/g, "");
 
-      // Subiri kidogo kama code bado haijatengenezwa
-      for (let i = 0; i < 20 && !code && !record.pairingCode; i++) {
-        await new Promise((r) => setTimeout(r, 300));
-      }
-      code = code || record.pairingCode;
-
-      if (!code) {
-        return res.status(500).json({ error: "Imeshindwa kutengeneza pairing code. Jaribu tena." });
+      if (!number || number.length < 9) {
+        socket.emit("pairing-error", { error: "Weka namba sahihi ya WhatsApp (mfano: 255712345678)." });
+        return;
       }
 
-      return res.json({ code, botName: config.BOT_NAME });
-    } catch (err) {
-      const status = err.code === "SESSIONS_FULL" ? 429 : 500;
-      return res.status(status).json({ error: err.message || "Hitilafu isiyojulikana." });
-    }
+      try {
+        socket.emit("status", { message: `✨ Inatengeneza pairing code kwa ${number}...` });
+
+        await startSession(number, {
+          onPairingCode: (code, err) => {
+            if (err || !code) {
+              socket.emit("pairing-error", {
+                error: err?.message || "Imeshindwa kutengeneza pairing code. Jaribu tena.",
+              });
+              return;
+            }
+            socket.emit("pairing-code", { number, code });
+          },
+        });
+      } catch (err) {
+        const isFull = err.code === "SESSIONS_FULL";
+        socket.emit("pairing-error", {
+          error: err.message || (isFull ? "Session zimejaa." : "Hitilafu isiyojulikana."),
+        });
+      }
+    });
   });
 
-  app.listen(config.WEB_PORT, () => {
+  server.listen(config.WEB_PORT, () => {
     console.log(`🌐 Ukurasa wa Pairing: http://localhost:${config.WEB_PORT}`);
   });
 }
