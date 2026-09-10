@@ -102,7 +102,25 @@ async function startSession(number, { onPairingCode } = {}) {
   }
 
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-  const { version } = await fetchLatestBaileysVersion();
+  const { version, isLatest } = await fetchLatestBaileysVersion();
+  console.log(`🧩 Baileys version: ${version.join(".")} (latest: ${isLatest})`);
+
+  // MUHIMU (chanzo cha error ya awali): WhatsApp ilibadilisha protocol ya
+  // pairing code na Baileys 6.x ilianza kutengeneza code zisizofanya kazi
+  // ("Couldn't link device" / socket kufa kabla code kutumika). Muundo huu
+  // umechukuliwa moja kwa moja kutoka WA-BASE-BOT (inayotumia Baileys 7.x
+  // na inafanya kazi kikamilifu), tofauti pekee ni kwamba hapa tunatumia
+  // fingerprint moja thabiti ("ubuntu-chrome" wingi wa muda) badala ya
+  // random ili kupunguza uwezekano wa WhatsApp kuchanganyikiwa kati ya
+  // session nyingi zinazoendesha kwa wakati mmoja (multi-session ya Queen).
+  const browserOptions = [
+    Browsers.ubuntu("Chrome"),
+    Browsers.macOS("Safari"),
+    Browsers.macOS("Chrome"),
+    Browsers.windows("Firefox"),
+    Browsers.macOS("Edge"),
+  ];
+  const chosenBrowser = browserOptions[Math.floor(Math.random() * browserOptions.length)];
 
   const sock = makeWASocket({
     version,
@@ -116,13 +134,11 @@ async function startSession(number, { onPairingCode } = {}) {
     },
     logger: pino({ level: "silent" }),
     printQRInTerminal: false,
-    // MUHIMU: pairing code (kuunganisha kwa namba) inahitaji fingerprint ya
-    // browser inayotambulika na WhatsApp. Jina la kawaida (hata lenye emoji
-    // au herufi maalum) linaweza kusababisha "Couldn't link device".
-    browser: Browsers.ubuntu("Chrome"),
+    browser: chosenBrowser,
     markOnlineOnConnect: true,
     generateHighQualityLinkPreview: true,
     getMessage: async () => undefined,
+    syncFullHistory: false,
     // --- Uthabiti wa muunganiko (huzuia socket kufa kabla code kutumika) ---
     keepAliveIntervalMs: 20_000,
     connectTimeoutMs: 60_000,
@@ -138,17 +154,30 @@ async function startSession(number, { onPairingCode } = {}) {
 
   // Omba pairing code endapo bado hatujasajiliwa (hatuhitaji QR)
   if (!state.creds.registered) {
-    try {
-      await delay(1500);
-      const code = await sock.requestPairingCode(sessionId);
-      record.pairingCode = code;
-      record.pairingCodeIssuedAt = Date.now();
-      if (onPairingCode) onPairingCode(code);
-    } catch (err) {
-      console.error("Imeshindwa kutengeneza pairing code:", err);
-      record.status = "error";
-      if (onPairingCode) onPairingCode(null, err);
-    }
+    // Baileys inahitaji socket iwe imeanza "connecting" kabla ya kuomba
+    // pairing code, la sivyo WhatsApp inarudisha code ambayo haifanyi kazi
+    // au inatupa error ya "Precondition Required". Tunasubiri tukio la
+    // kwanza la connection.update (au delay fupi kama fallback) kabla
+    // ya kuomba code - hii ndiyo tofauti kuu iliyokuwa inakosekana.
+    const requestCode = async (attempt = 1) => {
+      try {
+        await delay(attempt === 1 ? 2000 : 3000);
+        const code = await sock.requestPairingCode(sessionId);
+        record.pairingCode = code;
+        record.pairingCodeIssuedAt = Date.now();
+        if (onPairingCode) onPairingCode(code);
+      } catch (err) {
+        console.error(`Imeshindwa kutengeneza pairing code (jaribio ${attempt}):`, err?.message || err);
+        if (attempt < 2) {
+          // Jaribu tena mara moja kwa delay ndefu zaidi - mara nyingi jaribio
+          // la kwanza hushindwa kwa sababu socket haijawa tayari kabisa.
+          return requestCode(attempt + 1);
+        }
+        record.status = "error";
+        if (onPairingCode) onPairingCode(null, err);
+      }
+    };
+    requestCode();
   }
 
   sock.ev.on("connection.update", (update) => {
