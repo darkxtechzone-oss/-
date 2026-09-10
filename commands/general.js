@@ -26,6 +26,12 @@ ${config.PREFIX}demote @tag - Ondoa uadmin
 ${boldify("✨ Status")}
 ${config.PREFIX}autostatus on/off - Washa/Zima kuona na kupenda status (owner)
 
+${boldify("🧩 Nyingine")}
+${config.PREFIX}owner - Mawasiliano ya owner
+${config.PREFIX}runtime - Muda bot imekuwa ikiendesha
+${config.PREFIX}jid - Onyesha JID ya chat hii
+${config.PREFIX}listsession - Session zinazoendesha (owner)
+
 _${boldify("Imetengenezwa kwa ❤️")}_`.trim();
 
     if (fs.existsSync(config.MENU_IMAGE)) {
