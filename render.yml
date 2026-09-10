@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: queen-cynthia-bot
+    runtime: node
+    plan: starter # "free" haitunzi disk ya session (angalia maelezo chini)
+    region: oregon
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: PORT
+        value: "3000"
+    disk:
+      name: queen-cynthia-session
+      mountPath: /opt/render/project/src/session
+      sizeGB: 1
+
+# MAELEZO:
+# - "disk" inahifadhi session za WhatsApp (folda session/) zisipotee bot
+#   inapoanza upya. Render inahitaji plan ya kulipia (Starter au zaidi)
+#   ili kutumia persistent disk - "free" plan haina disk ya kudumu, hivyo
+#   utalazimika ku-pair upya kila deploy/restart ukitumia free plan.
+# - PORT inasomwa kutoka kwa mazingira (config.js -> process.env.PORT),
+#   Render itaweka yake moja kwa moja pia.
