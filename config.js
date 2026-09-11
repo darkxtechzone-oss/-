@@ -15,27 +15,19 @@ module.exports = {
   AUTO_LIKE_STATUS: true,
   STATUS_LIKE_EMOJI: "💖",
 
-  // Picha inayotumika kwenye ujumbe wa menu
   MENU_IMAGE: __dirname + "/image/menu.jpg",
 
-  // Ujumbe wa kukaribisha / kuaga wanachama kwenye group
+
   WELCOME_MESSAGE: (name, groupName) =>
     `👑 Karibu @${name} kwenye *${groupName}*!\nSoma sheria za group na ujisikie huru. 🎉`,
   GOODBYE_MESSAGE: (name, groupName) =>
     `👋 @${name} ameondoka kwenye *${groupName}*. Kwaheri!`,
 
-  // Mipangilio ya seva ya wavuti (pairing)
+  
   WEB_PORT: process.env.PORT || 3000,
   SOFTWARE_CREDIT: "this software provided by DarkX",
 
-  // MongoDB: hapa ndipo session (creds/keys za Baileys) zinahifadhiwa badala
-  // ya kwenye faili za lokali - hii inaruhusu bot kuendelea (bila ku-pair
-  // upya) hata kama server itaanzishwa upya au disk ikifutwa (mfano Render
-  // "free" plan isiyo na disk ya kudumu).
-  // NOTE: Bora zaidi ni kuweka hii kwenye env var (MONGODB_URI) badala ya
-  // kui-hardcode hapa moja kwa moja - lakini env var ikikosekana, thamani
-  // hii hapa chini ndiyo inayotumika (kama ilivyoombwa).
-  MONGODB_URI:
+  // 
     process.env.MONGODB_URI ||
     "mongodb+srv://mrxdeveloper2_db_user:P0DWc9vFOXICW4aa@cluster0.8n43fok.mongodb.net/?appName=Cluster0",
   MONGODB_DB_NAME: process.env.MONGODB_DB_NAME || "queen_cynthia",
