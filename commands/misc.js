@@ -1,10 +1,6 @@
 const config = require("../config");
 const { isOwner, boldify } = require("../helpers");
-// NOTE: require ya "../sessionManager" inafanyika ndani ya function (lazily)
-// badala ya juu ya faili - sessionManager.js nayo inahitaji handler.js
-// (ambayo inahitaji commands hizi), hivyo require ya juu ingesababisha
-// "circular dependency" na kupata undefined kwa getSessionsSummary/activeCount.
-
+// 
 function formatUptime(seconds) {
   const d = Math.floor(seconds / 86400);
   const h = Math.floor((seconds % 86400) / 3600);
@@ -14,7 +10,7 @@ function formatUptime(seconds) {
 }
 
 module.exports = {
-  // .owner - tuma namba/mawasiliano ya owner wa bot
+  
   owner: async (sock, msg, from) => {
     const numbers = config.OWNER_NUMBERS.map((n) => `wa.me/${n}`).join("\n");
     await sock.sendMessage(
